@@ -67,10 +67,9 @@ def main(page: ft.Page):
                 e.page.update()
                 await asyncio.sleep(loop_cnf["interval"])  # asyncio.sleep を使用
 
+            loop_cnt += 1
             if isCanceled:
                 break
-            if loop_cnf["count"] != 0:  # 無限ループでない場合のみカウントアップ
-                loop_cnt += 1
         run_btn.visible = True
         stop_btn.visible = add_btn.disabled = remove_btn.disabled = setting_btn.disabled = False
         e.page.update()
@@ -98,30 +97,30 @@ def main(page: ft.Page):
                 [
                     ft.Row(
                         [
-                            add_btn := ft.IconButton(
-                                icon=ft.Icons.ADD, on_click=click_add_btn, tooltip="宛先リストに追加"
-                            ),
+                            add_btn := ft.IconButton(icon=ft.Icons.ADD, on_click=click_add_btn, tooltip="Add target"),
                             remove_btn := ft.IconButton(
                                 icon=ft.Icons.PLAYLIST_REMOVE,
                                 on_click=click_remove_list_btn,
-                                tooltip="宛先リストを削除",
+                                tooltip="Delete target",
                             ),
                             ft.VerticalDivider(),
                             run_btn := ft.IconButton(
-                                icon=ft.Icons.PLAY_CIRCLE, on_click=click_run_ping_btn, tooltip="Ping送出開始"
+                                icon=ft.Icons.PLAY_CIRCLE, on_click=click_run_ping_btn, tooltip="Ping send"
                             ),
                             stop_btn := ft.IconButton(
                                 icon=ft.Icons.STOP_CIRCLE,
                                 visible=False,
                                 on_click=click_stop_ping_btn,
-                                tooltip="Ping送出中止",
+                                tooltip="Ping cancel",
                             ),
                             clean_btn := ft.IconButton(
-                                icon=ft.Icons.CLEANING_SERVICES, on_click=click_clean_btn, tooltip="結果を削除"
+                                icon=ft.Icons.CLEANING_SERVICES, on_click=click_clean_btn, tooltip="Clean the result"
                             ),
                         ],
                     ),
-                    setting_btn := ft.IconButton(icon=ft.Icons.SETTINGS, on_click=click_setting_btn),
+                    setting_btn := ft.IconButton(
+                        icon=ft.Icons.SETTINGS, on_click=click_setting_btn, tooltip="Ping setting"
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
