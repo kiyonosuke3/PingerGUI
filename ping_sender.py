@@ -1,7 +1,9 @@
 import ping3
 
 
-def ping_sender(target_ip, timeout=0.03, unit="ms", size=5, ttl=32):
+def ping_sender(target_ip, timeout, unit, size, ttl):
+    if target_ip == "0.0.0.0":
+        return 1, f"Invalid address"
     ping3.EXCEPTIONS = True
     try:
         result = ping3.ping(target_ip, timeout=timeout, unit=unit, size=size, ttl=ttl)

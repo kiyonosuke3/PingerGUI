@@ -2,6 +2,7 @@ import flet as ft
 from add_destination_dialog import AddDestinationDialog
 from config_dialog import ConfigDialog
 from ping_sender import ping_sender
+import asyncio
 from time import sleep
 
 
@@ -11,15 +12,14 @@ def main(page: ft.Page):
     page.window.maximizable = False
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    dist_lst = []
     conf_dlg = ConfigDialog()
     isCanceled = False
 
-    def add_btn(e):
+    def click_add_btn(e):
         e.page.open(AddDestinationDialog(add_list))
 
     def add_list(e, adr_lst):
-        nonlocal dist_lst
+        before_len = len(target_list.controls)
         for i, adr in enumerate(adr_lst):
             target_list.controls.append(
                 ft.Container(
@@ -32,60 +32,64 @@ def main(page: ft.Page):
                         ],
                         spacing=0,
                     ),
-                    bgcolor=None if i % 2 else ft.Colors.PRIMARY_CONTAINER,
+                    bgcolor=None if (i + before_len) % 2 else ft.Colors.PRIMARY_CONTAINER,
                     expand=True,
                 )
             )
-        dist_lst = adr_lst.copy()
         e.page.update()
 
-    def remove_list(e):
+    def click_remove_list_btn(e):
         target_list.controls.clear()
         e.page.update()
 
-    def run_ping_btn(e):
+    async def click_run_ping_btn(e):  # async としてマーク
         nonlocal isCanceled
         run_btn.visible = False
-        stop_btn.visible = True
+        stop_btn.visible = add_btn.disabled = remove_btn.disabled = setting_btn.disabled = True
         e.page.update()
 
         isCanceled = False
         loop_cnf = conf_dlg.value_other
         loop_cnt = 0
-        while loop_cnt < loop_cnf["count"]:
+
+        while loop_cnt < loop_cnf["count"] if loop_cnf["count"] != 0 else True:  # 0で無限ループ
             for cont in target_list.controls:
                 if isCanceled:
                     break
-                rslt = ping_sender(cont.content.controls[0].value, **conf_dlg.value_ping)
-                cont.content.controls[1].value = int(cont.content.controls[1].value) + 1
+                # UIをブロックしないように、ping_senderを別スレッドで実行
+                rslt = await asyncio.to_thread(ping_sender, cont.content.controls[0].value, **conf_dlg.value_ping)
+
+                # Textコントロールの値を設定する前に文字列に変換
+                cont.content.controls[1].value = str(int(cont.content.controls[1].value) + 1)
                 if rslt[0]:
-                    cont.content.controls[2].value = int(cont.content.controls[2].value) + 1
+                    cont.content.controls[2].value = str(int(cont.content.controls[2].value) + 1)
                 cont.content.controls[3].value = rslt[1]
                 e.page.update()
-                sleep(loop_cnf["interval"])
+                await asyncio.sleep(loop_cnf["interval"])  # asyncio.sleep を使用
+
             if isCanceled:
                 break
-            if loop_cnf["count"] != 0:
+            if loop_cnf["count"] != 0:  # 無限ループでない場合のみカウントアップ
                 loop_cnt += 1
         run_btn.visible = True
-        stop_btn.visible = False
+        stop_btn.visible = add_btn.disabled = remove_btn.disabled = setting_btn.disabled = False
         e.page.update()
 
-    def stop_ping_btn(e):
+    def click_stop_ping_btn(e):
         nonlocal isCanceled
         isCanceled = True
         run_btn.visible = True
-        stop_btn.visible = False
+        stop_btn.visible = add_btn.disabled = remove_btn.disabled = setting_btn.disabled = False
         e.page.update()
 
-    def clean_btn(e):
+    def click_clean_btn(e):
         for cont in target_list.controls:
             cont.content.controls[1].value = "0"
             cont.content.controls[2].value = "0"
             cont.content.controls[3].value = ""
         e.page.update()
 
-    def setting_btn(e):
+    def click_setting_btn(e):
         e.page.open(conf_dlg)
 
     main_page = ft.Column(
@@ -94,21 +98,30 @@ def main(page: ft.Page):
                 [
                     ft.Row(
                         [
-                            ft.IconButton(icon=ft.Icons.ADD, on_click=add_btn, tooltip="宛先リストに追加"),
-                            ft.IconButton(
-                                icon=ft.Icons.PLAYLIST_REMOVE, on_click=remove_list, tooltip="宛先リストを削除"
+                            add_btn := ft.IconButton(
+                                icon=ft.Icons.ADD, on_click=click_add_btn, tooltip="宛先リストに追加"
+                            ),
+                            remove_btn := ft.IconButton(
+                                icon=ft.Icons.PLAYLIST_REMOVE,
+                                on_click=click_remove_list_btn,
+                                tooltip="宛先リストを削除",
                             ),
                             ft.VerticalDivider(),
                             run_btn := ft.IconButton(
-                                icon=ft.Icons.PLAY_CIRCLE, on_click=run_ping_btn, tooltip="Ping送出開始"
+                                icon=ft.Icons.PLAY_CIRCLE, on_click=click_run_ping_btn, tooltip="Ping送出開始"
                             ),
                             stop_btn := ft.IconButton(
-                                icon=ft.Icons.STOP_CIRCLE, visible=False, on_click=stop_ping_btn, tooltip="Ping送出中止"
+                                icon=ft.Icons.STOP_CIRCLE,
+                                visible=False,
+                                on_click=click_stop_ping_btn,
+                                tooltip="Ping送出中止",
                             ),
-                            ft.IconButton(icon=ft.Icons.CLEANING_SERVICES, on_click=clean_btn, tooltip="結果を削除"),
+                            clean_btn := ft.IconButton(
+                                icon=ft.Icons.CLEANING_SERVICES, on_click=click_clean_btn, tooltip="結果を削除"
+                            ),
                         ],
                     ),
-                    ft.IconButton(icon=ft.Icons.SETTINGS, on_click=setting_btn),
+                    setting_btn := ft.IconButton(icon=ft.Icons.SETTINGS, on_click=click_setting_btn),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),

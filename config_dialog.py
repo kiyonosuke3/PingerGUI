@@ -51,8 +51,8 @@ class ConfigDialog(AlertDialog):
         return {
             "timeout": int(self.form_timeout.value),
             "unit": "ms",
-            "ttl": int(self.form_TimeToLive.value),
             "size": int(self.form_size.value),
+            "ttl": int(self.form_TimeToLive.value),
         }
 
     @property
