@@ -14,7 +14,7 @@ class ConfigDialog(AlertDialog):
             value=100, label="Wait intervals", dense=True, suffix_text="ms", input_filter=NumbersOnlyInputFilter()
         )
         self.form_timeout = TextField(
-            value=4, label="Timeout", dense=True, suffix_text="s", input_filter=NumbersOnlyInputFilter()
+            value=1000, label="Timeout", dense=True, suffix_text="ms", input_filter=NumbersOnlyInputFilter()
         )
         self.form_TimeToLive = TextField(value=128, label="TTL", dense=True, input_filter=NumbersOnlyInputFilter())
         self.form_size = TextField(
@@ -49,7 +49,7 @@ class ConfigDialog(AlertDialog):
     @property
     def value_ping(self):
         return {
-            "timeout": int(self.form_timeout.value),
+            "timeout": float(self.form_timeout.value)*0.001,
             "unit": "ms",
             "size": int(self.form_size.value),
             "ttl": int(self.form_TimeToLive.value),
